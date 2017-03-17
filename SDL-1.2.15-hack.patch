@@ -1,0 +1,13 @@
+diff --git a/src/audio/SDL_audio.c b/src/audio/SDL_audio.c
+index beb26e0..6f070e8 100644
+--- a/src/audio/SDL_audio.c
++++ b/src/audio/SDL_audio.c
+@@ -219,7 +219,7 @@ int SDLCALL SDL_RunAudio(void *audiop)
+ 		if ( stream == audio->fake_stream ) {
+ 			SDL_Delay((audio->spec.samples*1000)/audio->spec.freq);
+ 		} else {
+-			audio->WaitAudio(audio);
++			// audio->WaitAudio(audio);
+ 		}
+ 	}
+ 

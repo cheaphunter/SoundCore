@@ -1,0 +1,21 @@
+SDL hack
+--------
+
+SDL-1.2.15-hack.patch allows mpg123-with-SDL audio capture using AudioShark.
+
+Put a patched copy of libSDL-1.2.so.0 in the current folder and execute,
+
+LD_LIBRARY_PATH=. ./AudioShark.py -l /usr/local/bin/mpg123 knock.mp3
+
+SDL notes
+---------
+
+SDL_RunAudio in src/audio/SDL_audio.c and PULSE_WaitAudio in
+src/audio/pulse/SDL_pulseaudio.c are interesting.
+
+Win32 notes
+-----------
+
+Win32 stuff is currently unstable and crash prone. It is unlikely to improve.
+
+Use https://github.com/kholia/wine/tree/SoundCore instead.

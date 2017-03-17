@@ -1,0 +1,23 @@
+With mpg123-1.24.0-win32-hack.patch applied, mpg123 dumps the audio file well
+but gets stuck during the exit process.
+
+Thread 1 (Thread 3444.0xcc):
+#0  0x000000006e7014b1 in wait_for_buffer (hdr=hdr@entry=0x6765e0,
+    hEvent=0x1e4) at src/libout123/modules/win32.c:133
+#1  0x000000006e701681 in drain_win32 (ao=ao@entry=0x6777e0)
+    at src/libout123/modules/win32.c:265
+#2  0x000000006e7016cf in close_win32 (ao=0x6777e0)
+    at src/libout123/modules/win32.c:279
+#3  0x0000000068041e6b in out123_pause (ao=0x6777e0)
+    at ../mpg123-1.24.0/src/libout123/libout123.c:558
+#4  0x0000000068042119 in out123_drain (ao=ao@entry=0x6777e0)
+    at ../mpg123-1.24.0/src/libout123/libout123.c:706
+#5  0x0000000068042144 in out123_close (ao=ao@entry=0x6777e0)
+    at ../mpg123-1.24.0/src/libout123/libout123.c:471
+#6  0x0000000068042207 in out123_del (ao=0x6777e0)
+    at ../mpg123-1.24.0/src/libout123/libout123.c:111
+#7  0x0000000000407328 in safe_exit (code=code@entry=0)
+    at ../mpg123-1.24.0/src/mpg123.c:278
+#8  0x0000000000409200 in main (sys_argc=<optimized out>,
+    sys_argv=<optimized out>) at ../mpg123-1.24.0/src/mpg123.c:1428
+(gdb)

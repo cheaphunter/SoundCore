@@ -1,0 +1,13 @@
+diff --git a/src/audio/SDL_audio.c b/src/audio/SDL_audio.c
+index 2ffd216..682d131 100644
+--- a/src/audio/SDL_audio.c
++++ b/src/audio/SDL_audio.c
+@@ -655,7 +655,7 @@ SDL_RunAudio(void *devicep)
+             SDL_Delay(delay);
+         } else {
+             current_audio.impl.PlayDevice(device);
+-            current_audio.impl.WaitDevice(device);
++            // current_audio.impl.WaitDevice(device);
+         }
+     }
+ 

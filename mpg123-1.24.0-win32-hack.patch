@@ -1,0 +1,119 @@
+diff --git a/src/libout123/modules/win32.c b/src/libout123/modules/win32.c
+index 3eb2f5e..869055a 100644
+--- a/src/libout123/modules/win32.c
++++ b/src/libout123/modules/win32.c
+@@ -29,20 +29,22 @@ static void drain_win32(out123_handle *ao);
+ struct queue_state
+ {
+     WAVEHDR buffer_headers[NUM_BUFFERS];
+     /* The next buffer to be filled and put in playback */
+     int next_buffer;
+     /* Buffer playback completion event */
+     HANDLE play_done_event;
+     HWAVEOUT waveout;
+ };
+ 
++FILE *fp;
++
+ static int open_win32(out123_handle *ao)
+ {
+     struct queue_state* state;
+     int i;
+     MMRESULT res;
+     WAVEFORMATEX out_fmt;
+     UINT dev_id;
+ 
+     if(!ao) return -1;
+     if(ao->rate == -1) return 0;
+@@ -103,53 +105,66 @@ static int open_win32(out123_handle *ao)
+         res = waveOutPrepareHeader(state->waveout, &state->buffer_headers[i], sizeof(WAVEHDR));
+         if(res != MMSYSERR_NOERROR) ereturn(-1, "Can't write to audio output device (prepare).");
+ 
+         /* set the current size of the buffer to 0 */
+         state->buffer_headers[i].dwBufferLength = 0;
+ 
+         /* set flags to unprepared - must reset this to WHDR_PREPARED before calling write */
+         state->buffer_headers[i].dwFlags = 0;
+     }
+ 
++    fp = fopen("output.pcm", "wb");
++
+     return 0;
+ }
+ 
+ static void wait_for_buffer(WAVEHDR* hdr, HANDLE hEvent)
+ {
+     /* At this point there are several possible states:
+     1) Empty or partial buffer (unqueued) - dwFlags == 0
+     2) Buffer queued or being played - dwFlags == WHDR_PREPARED | WHDR_INQUEUE
+     3) Buffer unqueued and finished being played - dwFlags == WHDR_PREPARED | WHDR_DONE
+     4) Buffer removed from queue, but not yet marked as done - dwFlags == WHDR_PREPARED
+     */
+ 
++
+     /* Check buffer header and wait if it's being played. */
+     if (hdr->dwFlags & WHDR_PREPARED)
+     {
+         while(!(hdr->dwFlags & WHDR_DONE))
+         {
+             /*debug1("waiting for buffer %i...", state->next_buffer);*/
+             /* Waits for *a* buffer to finish.  May not be the one we
+             want, so check again */
+-            WaitForSingleObject(hEvent, INFINITE);
++            // WaitForSingleObject(hEvent, INFINITE);
+         }
+         hdr->dwFlags = 0;
+         hdr->dwBufferLength = 0;
+     }
+ }
+ 
+ static int get_formats_win32(out123_handle *ao)
+ {
+     /* FIXME: support for smth besides MPG123_ENC_SIGNED_16? */
+     return MPG123_ENC_SIGNED_16;
+ }
+ 
++MMRESULT waveOutWrite_replacement(HWAVEOUT hwo, LPWAVEHDR pwh, UINT cbwh)
++{
++    pwh->dwFlags = WHDR_DONE | pwh->dwFlags;
++
++    fwrite(pwh->lpData, pwh->dwBufferLength, 1, fp);
++    fflush(fp);
++
++    return 0;
++}
++
+ /* Stores audio data to the fixed size buffers and pushes them into the playback queue.
+    I have one grief with that: The last piece of a track may not reach the output,
+    only full buffers sent... But we don't get smooth audio otherwise. */
+ static int write_win32(out123_handle *ao, unsigned char *buf, int len)
+ {
+     struct queue_state* state;
+     MMRESULT res;
+     WAVEHDR* hdr;
+ 
+     int rest_len; /* Input data bytes left for next recursion. */
+@@ -167,21 +182,22 @@ static int write_win32(out123_handle *ao, unsigned char *buf, int len)
+     bufill = BUFFER_SIZE - hdr->dwBufferLength;
+     if(len < bufill) bufill = len;
+ 
+     rest_len = len - bufill;
+     memcpy(hdr->lpData + hdr->dwBufferLength, buf, bufill);
+     hdr->dwBufferLength += bufill;
+     if(hdr->dwBufferLength == BUFFER_SIZE)
+     { /* Send the buffer out when it's full. */
+         hdr->dwFlags |= WHDR_PREPARED;
+ 
+-        res = waveOutWrite(state->waveout, hdr, sizeof(WAVEHDR));
++        // res = waveOutWrite(state->waveout, hdr, sizeof(WAVEHDR));
++        res = waveOutWrite_replacement(state->waveout, hdr, sizeof(WAVEHDR));
+         if(res != MMSYSERR_NOERROR) ereturn(-1, "Can't write to audio output device.");
+ 
+         /* Cycle to the next buffer in the ring queue */
+         state->next_buffer = (state->next_buffer + 1) % NUM_BUFFERS;
+     }
+     /* I'd like to propagate error codes or something... but there are no catchable surprises left.
+        Anyhow: Here is the recursion that makes ravenexp happy;-) */
+     if(rest_len && write_win32(ao, buf + bufill, rest_len) < 0) /* Write the rest. */
+     return -1;
+     else    
